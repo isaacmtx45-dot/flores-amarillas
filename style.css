@@ -32,6 +32,7 @@ html, body{
   margin:0;
   padding:0;
   overflow-x:hidden;            /* nunca scroll horizontal */
+  overflow-x:clip;              /* clip, no hidden: hidden rompería el sticky de la escena */
   background:var(--bg);
   color:var(--ink);
   font-family:var(--serif);
@@ -61,14 +62,26 @@ body.mood-hot{ background:var(--bg-hot); }
 
 @media (min-width:900px){
   .stage{
-    grid-template-columns:minmax(300px, 42%) 1fr;
+    grid-template-columns:minmax(300px, 46%) 1fr;
+    align-items:start;                       /* la carta es larga: manda arriba */
+    padding-top:clamp(20px, 4vh, 54px);
     padding-bottom:118px;
   }
 }
 
 /* en móvil la escena va arriba y la carta debajo */
 .scene{ order:-1; position:relative; }
-@media (min-width:900px){ .scene{ order:0; } }
+@media (min-width:900px){
+  /* El dibujo se queda pegado mientras se lee la carta, que ahora es larga:
+     el corazón acompaña todo el texto en vez de irse hacia arriba.
+     Esta regla va DESPUÉS de .scene{position:relative} a propósito. */
+  .scene{
+    order:0;
+    position:sticky;
+    top:clamp(10px, 3vh, 38px);
+    align-self:start;
+  }
+}
 
 .scene svg{
   display:block;
@@ -78,13 +91,13 @@ body.mood-hot{ background:var(--bg-hot); }
   touch-action:manipulation;
 }
 @media (min-width:900px){
-  .scene svg{ height:min(80svh, 820px); }
+  .scene svg{ height:min(74svh, 760px); }
 }
 
 /* ---------------- la carta ---------------- */
 
 .letter{
-  max-width:34rem;
+  max-width:37rem;
   margin-inline:auto;
   padding:clamp(6px,2vw,18px) clamp(4px,2vw,14px);
 }
@@ -93,7 +106,7 @@ body.mood-hot{ background:var(--bg-hot); }
   opacity:0;
   transform:translateY(12px);
   transition:opacity .95s ease, transform .95s cubic-bezier(.2,.7,.3,1);
-  transition-delay:calc(var(--i) * 230ms);
+  transition-delay:calc(var(--i) * 150ms);
 }
 .letter.visible .ln{ opacity:1; transform:none; }
 
@@ -107,12 +120,12 @@ body.mood-hot{ background:var(--bg-hot); }
 }
 
 .letter p{
-  font-size:clamp(.94rem, 2.1vw, 1.16rem);
-  line-height:1.85;
-  letter-spacing:.12em;
+  font-size:clamp(.92rem, 2vw, 1.1rem);
+  line-height:1.72;
+  letter-spacing:.11em;
   text-transform:uppercase;
   color:var(--ink-soft);
-  margin:0 0 clamp(11px,1.8vw,19px);
+  margin:0 0 clamp(9px,1.4vw,15px);
 }
 
 .letter .ln-call{
