@@ -484,7 +484,10 @@
 
   var heartTaps = 0;
 
-  heartHit.addEventListener('click', function (e) {
+  // El toque va en el <svg> entero, no solo en la silueta del corazón: el hueco
+  // de arriba del corazón no es silueta, y ahí un dedo no encontraba nada.
+  svg.addEventListener('click', function (e) {
+    if (state === 'idle') { play(); return; }      // tocar la flor también arranca
     if (state !== 'done') return;
     var p = localPoint(e);
     petalBurst(p.x, p.y);
@@ -722,10 +725,6 @@
   btnMain.disabled = false;
   btnMain.textContent = '🌻 Haz florecer algo';
 
-  // Y la flor del principio también arranca la historia, por si va directo a tocarla.
-  svg.addEventListener('click', function () {
-    if (state === 'idle') play();
-  });
 
   // Ganchos de prueba: solo si la URL trae ?auto o ?debug.
   // ?auto arranca la animación sin tocar el botón (sirve para captura y demo).

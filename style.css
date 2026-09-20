@@ -21,6 +21,11 @@
 
 *, *::before, *::after{ box-sizing:border-box; }
 
+/* El atributo hidden NO oculta nada si una regla de autor define display:
+   .backdrop tiene display:flex y se quedaba tapando toda la pantalla con
+   z-index 40, tragándose los clics del botón. Esta línea manda siempre. */
+[hidden]{ display:none !important; }
+
 html{ -webkit-text-size-adjust:100%; }
 
 html, body{
@@ -199,9 +204,9 @@ body.mood-hot .fl.hot .pt{ fill:#e8604a; transition:fill 1.2s ease; }
 }
 body.done #l-sway{ animation:sway 9s ease-in-out infinite; }
 
-/* zona sensible del corazón */
+/* Toda la escena es sensible al final, no solo la silueta del corazón. */
 .heart-hit{ fill:transparent; pointer-events:none; }
-body.done .heart-hit{ pointer-events:fill; cursor:pointer; }
+body.done .scene svg{ cursor:pointer; }
 
 /* partículas */
 .fx-fall{
