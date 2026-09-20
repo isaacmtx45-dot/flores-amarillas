@@ -41,7 +41,9 @@
   };
   var heartHit  = $('#heartHit');
   var letterEl  = $('#letter');
-  var hintTap   = $('#hintTap');
+  var hintTap    = $('#hintTap');
+  var hintTexto  = $('#hintTexto');
+  var hintPuntos = $('#hintPuntos');
   var btnMain   = $('#btnMain');
   var btnHot    = $('#btnHot');
   var btnChisme = $('#btnChisme');
@@ -405,6 +407,8 @@
     btnMain.disabled = false;
     btnMain.textContent = 'Volver a florecer 🌻';
     btnHot.hidden = false;
+    construirPuntos();
+    pintarCuenta();
     hintTap.hidden = false;
 
     // En vertical la carta queda debajo del corazón: la asomo sin decapitar el corazón.
@@ -483,6 +487,40 @@
   }
 
   var heartTaps = 0;
+  var TOQUES_CHISME = 7;
+
+  // Cuenta regresiva del modo chismosas. Sin esto, quien toque el corazón dos
+  // veces y lo deje no llega a enterarse de que había algo escondido.
+  var PISTAS = [
+    'toca el corazón',                  // 0 toques
+    'algo se movió ahí detrás…',        // 1
+    'se oyen cuchicheos',               // 2
+    'alguien te está mirando',          // 3
+    'eso de ahí parece un ojo 👀',      // 4
+    'vienen en camino',                 // 5
+    'una más y se destapa esto'         // 6
+  ];
+
+  function construirPuntos() {
+    hintPuntos.innerHTML = '';
+    for (var i = 0; i < TOQUES_CHISME; i++) {
+      hintPuntos.appendChild(document.createElement('span')).className = 'punto';
+    }
+  }
+
+  function pintarCuenta() {
+    var p = hintPuntos.children, i;
+    for (i = 0; i < p.length; i++) {
+      p[i].className = 'punto' + (i < heartTaps ? ' on' : '');
+    }
+    if (chismeOn) {
+      hintTexto.textContent = '👀 el comité ya está viendo esto';
+      hintTap.classList.add('cerca');
+      return;
+    }
+    hintTexto.textContent = PISTAS[Math.min(heartTaps, PISTAS.length - 1)];
+    hintTap.classList.toggle('cerca', heartTaps >= TOQUES_CHISME - 3);
+  }
 
   // El toque va en el <svg> entero, no solo en la silueta del corazón: el hueco
   // de arriba del corazón no es silueta, y ahí un dedo no encontraba nada.
@@ -491,9 +529,10 @@
     if (state !== 'done') return;
     var p = localPoint(e);
     petalBurst(p.x, p.y);
+    if (chismeOn) return;                          // ya se destapó: solo pétalos
     heartTaps++;
-    if (heartTaps === 4 && !chismeOn) toast('…algo se está asomando por ahí 👀', 2600);
-    if (heartTaps >= 7 && !chismeOn) openChisme(true);
+    if (heartTaps >= TOQUES_CHISME) openChisme(true);
+    pintarCuenta();
   });
 
   /* ------------------------------------------------------------
@@ -661,6 +700,9 @@
 
   function resetEggs() {
     hotLevel = 0; heartTaps = 0; chismeOn = false; voted = false;
+    hintTexto.textContent = PISTAS[0];
+    hintTap.classList.remove('cerca');
+    construirPuntos();
     clearInterval(liveTimer);
     $('#liveBanner').hidden = true;
     $('#voteResult').textContent = '';

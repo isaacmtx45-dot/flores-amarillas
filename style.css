@@ -348,6 +348,10 @@ body.done .scene svg{ cursor:pointer; }
   position:absolute;
   left:50%; bottom:-2px;
   transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  gap:10px;
+  white-space:nowrap;
   margin:0;
   font-size:.78rem;
   font-style:italic;
@@ -355,6 +359,22 @@ body.done .scene svg{ cursor:pointer; }
   color:rgba(29,26,20,.42);
   animation:fadein 1.2s ease both;
   pointer-events:none;
+  transition:color .5s ease;
+}
+.hint-tap.cerca{ color:rgba(29,26,20,.72); }
+
+/* la cuenta regresiva del modo chismosas */
+.puntos{ display:inline-flex; gap:5px; }
+.punto{
+  width:6px; height:6px;
+  border-radius:50%;
+  border:1px solid rgba(29,26,20,.28);
+  transition:background-color .35s ease, border-color .35s ease, transform .35s cubic-bezier(.34,1.6,.6,1);
+}
+.punto.on{
+  background:var(--yellow);
+  border-color:var(--yellow);
+  transform:scale(1.35);
 }
 
 /* ---------------- tarjetas de los easter eggs ---------------- */
