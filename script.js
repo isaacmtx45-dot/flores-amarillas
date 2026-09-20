@@ -47,6 +47,7 @@
   var btnMain   = $('#btnMain');
   var btnHot    = $('#btnHot');
   var btnChisme = $('#btnChisme');
+  var btnAmor   = $('#btnAmor');
   var toastEl   = $('#toast');
 
   // Respetar a quien pide menos movimiento: la historia es la misma, más corta.
@@ -403,10 +404,14 @@
 
     // --- estado final ---
     document.body.classList.add('done');
+    // Con la floración ya terminada, la animación estorba: si sigue puesta gana
+    // a la transición y las flores no podrían viajar a formar el mensaje.
+    crownPts.forEach(function (f) { soltarAnimacion(f.node); });
     state = 'done';
     btnMain.disabled = false;
     btnMain.textContent = 'Volver a florecer 🌻';
     btnHot.hidden = false;
+    btnAmor.hidden = false;
     construirPuntos();
     pintarCuenta();
     hintTap.hidden = false;
@@ -534,6 +539,118 @@
     if (heartTaps >= TOQUES_CHISME) openChisme(true);
     pintarCuenta();
   });
+
+  /* ------------------------------------------------------------
+     7-bis. EL FINAL: LAS FLORES ESCRIBEN
+     El texto se dibuja en un <canvas> que nadie ve, se leen los píxeles
+     pintados y cada uno se convierte en el destino de una flor. Ninguna
+     imagen, ninguna fuente descargada: lo dibuja el propio navegador.
+     ------------------------------------------------------------ */
+
+  var MENSAJE = ['TE QUIERO', 'SARA'];
+  var modoTexto = false;
+  var floresExtra = [];
+
+  function puntosTexto(lineas, objetivo) {
+    var W = 600, H = 640;
+    var cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    var cx = cv.getContext('2d');
+    if (!cx) return [];
+    cx.fillStyle = '#000';
+    cx.textAlign = 'center';
+    cx.textBaseline = 'middle';
+
+    var fam = ' Georgia, "Times New Roman", serif';
+    var base = 150, ancho = 0, i;
+    try { cx.letterSpacing = '9px'; } catch (e) { /* navegador viejo: sin separación */ }
+    cx.font = '700 ' + base + 'px' + fam;
+    for (i = 0; i < lineas.length; i++) ancho = Math.max(ancho, cx.measureText(lineas[i]).width);
+    var size = Math.min(base, base * 430 / ancho);   // 430 cabe en la caja del dibujo
+    cx.font = '700 ' + size + 'px' + fam;
+
+    var alto = size * 1.25;
+    var y0 = 292 - (lineas.length - 1) * alto / 2;
+    for (i = 0; i < lineas.length; i++) cx.fillText(lineas[i], 300, y0 + i * alto);
+
+    var d = cx.getImageData(0, 0, W, H).data, x, y;
+    var area = 0;
+    for (y = 0; y < H; y += 2) for (x = 0; x < W; x += 2) if (d[(y * W + x) * 4 + 3] > 128) area += 4;
+    if (!area) return [];
+
+    var paso = Math.max(6, Math.round(Math.sqrt(area / objetivo)));
+    var pts = [];
+    for (y = 0; y < H; y += paso) for (x = 0; x < W; x += paso) {
+      if (d[(y * W + x) * 4 + 3] > 128) pts.push({ x: x + rnd(-1.6, 1.6), y: y + rnd(-1.6, 1.6) });
+    }
+    return pts;
+  }
+
+  // Las flores ya no están animándose: al llegar al final se cancela su
+  // animación de floración para que mande la transición de la hoja de estilo
+  // y puedan viajar cambiando su --pos.
+  function soltarAnimacion(node) {
+    if (!node.getAnimations) return;
+    node.getAnimations().forEach(function (a) { try { a.cancel(); } catch (e) { } });
+  }
+
+  function formarMensaje() {
+    if (modoTexto || !crownPts.length) return;
+    modoTexto = true;
+    document.body.classList.add('texto');
+
+    var destinos = puntosTexto(MENSAJE, Math.max(300, Math.round(crownPts.length * 1.7)));
+    if (!destinos.length) { modoTexto = false; document.body.classList.remove('texto'); return; }
+
+    // faltan flores para escribirlo: nacen las que hagan falta
+    var faltan = destinos.length - crownPts.length, frag = document.createDocumentFragment(), i;
+    for (i = 0; i < faltan; i++) {
+      var base = pick(crownPts);
+      var nueva = flowerNode(base.x, base.y, rnd(9, 13), rnd(0, 420));
+      var reg = { x: base.x, y: base.y, r: 11, node: nueva, calor: Math.random(), extra: true };
+      crownPts.push(reg); floresExtra.push(reg);
+      frag.appendChild(nueva);
+    }
+    L.crown.appendChild(frag);
+
+    // de izquierda a derecha, para que no se crucen todas entre sí
+    var orden = crownPts.slice().sort(function (a, b) { return (a.x - b.x) || (a.y - b.y); });
+    destinos.sort(function (a, b) { return (a.x - b.x) || (a.y - b.y); });
+
+    setTimeout(function () {
+      orden.forEach(function (f, k) {
+        var d = destinos[k % destinos.length];
+        var jitter = k >= destinos.length ? 5 : 0;      // las repetidas engordan el trazo
+        soltarAnimacion(f.node);
+        f.node.style.transitionDelay = (rnd(0, 520) | 0) + 'ms';
+        f.node.style.setProperty('--pos',
+          pos(d.x + rnd(-jitter, jitter), d.y + rnd(-jitter, jitter), rnd(0, 360)));
+      });
+    }, faltan > 0 ? 620 : 40);
+  }
+
+  function volverAlCorazon() {
+    if (!modoTexto) return;
+    modoTexto = false;
+    document.body.classList.remove('texto');
+
+    crownPts.forEach(function (f) {
+      soltarAnimacion(f.node);
+      f.node.style.transitionDelay = (rnd(0, 420) | 0) + 'ms';
+      f.node.style.setProperty('--pos', pos(f.x, f.y, rnd(0, 360)));
+    });
+
+    // las que nacieron solo para el mensaje se despiden
+    var seVan = floresExtra;
+    floresExtra = [];
+    seVan.forEach(function (f) {
+      f.node.classList.add('yendose');
+      crownPts.splice(crownPts.indexOf(f), 1);
+    });
+    setTimeout(function () {
+      seVan.forEach(function (f) { if (f.node.parentNode) f.node.parentNode.removeChild(f.node); });
+    }, 1800);
+  }
 
   /* ------------------------------------------------------------
      8. EASTER EGG 1 — MODO CACHONDITO
@@ -733,7 +850,10 @@
 
   function resetEggs() {
     hotLevel = 0; heartTaps = 0; chismeOn = false; voted = false;
-    document.body.classList.remove('mood-hot', 'hot-max');
+    modoTexto = false; floresExtra = [];
+    document.body.classList.remove('mood-hot', 'hot-max', 'texto');
+    btnAmor.hidden = true;
+    btnAmor.textContent = '💛 Una última cosa';
     hintTexto.textContent = PISTAS[0];
     hintTap.classList.remove('cerca');
     construirPuntos();
@@ -759,6 +879,16 @@
       setTimeout(play, 420);
     } else {
       play();
+    }
+  });
+
+  btnAmor.addEventListener('click', function () {
+    if (modoTexto) {
+      volverAlCorazon();
+      btnAmor.textContent = '💛 Una última cosa';
+    } else {
+      formarMensaje();
+      btnAmor.textContent = 'Volver al corazón 💛';
     }
   });
 
