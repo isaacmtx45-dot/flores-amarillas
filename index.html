@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Feliz Día de las Flores Amarillas</title>
+<meta name="description" content="Una carta romántica que florece sola.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="style.css">
+<!-- La fuente bonita es un lujo, no un requisito: se carga SIN bloquear.
+     Si el navegador la bloquea (Brave lo hace por defecto) o no hay señal,
+     la página arranca igual con la serif del sistema. -->
+<link rel="stylesheet" media="print" onload="this.media='all'"
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌻</text></svg>">
+</head>
+<body>
+
+<main class="stage">
+
+  <!-- ====== LA CARTA ====== -->
+  <section class="letter" id="letter" aria-live="polite">
+    <h1 class="ln" style="--i:0">🌻 Feliz día de las flores <span class="nb">amarillas 🌻</span></h1>
+
+    <p class="ln ln-call" style="--i:1">Sara,</p>
+    <p class="ln" style="--i:2">Cada momento importante quiero compartirlo contigo.</p>
+    <p class="ln" style="--i:3">Has llegado a mi vida a traerme alegría.</p>
+    <p class="ln" style="--i:4">Así como el sol ilumina los campos, así has iluminado mi vida.</p>
+    <p class="ln" style="--i:5">Que estas flores te recuerden lo especial que eres para mí.</p>
+
+    <p class="sign ln" style="--i:6">Con el sol del que florecen mis días</p>
+  </section>
+
+  <!-- ====== LA ESCENA ====== -->
+  <section class="scene">
+    <svg id="scene" viewBox="0 0 600 640" preserveAspectRatio="xMidYMid meet"
+         role="img" aria-label="Una flor amarilla crece hasta formar un corazón de flores">
+      <g id="l-ground"></g>
+      <g id="l-sway">
+        <g id="l-plant"></g>
+        <g id="l-crown"></g>
+        <path id="heartHit" class="heart-hit"></path>
+      </g>
+      <g id="l-intro"></g>
+      <g id="l-fx"></g>
+    </svg>
+    <p class="hint-tap" id="hintTap" hidden>toca el corazón</p>
+  </section>
+
+</main>
+
+<!-- ====== CONTROLES ====== -->
+<div class="controls">
+  <!-- Nace apagado a propósito: lo enciende script.js cuando está listo.
+       Así un clic prematuro no parece "no hace nada", y si el JavaScript
+       no llegara a cargar, se ve que algo falla en vez de fallar en silencio. -->
+  <button class="btn" id="btnMain" type="button" disabled>Preparando…</button>
+  <button class="btn ghost danger" id="btnHot" type="button" hidden>⛔ No presionar</button>
+  <button class="btn ghost" id="btnChisme" type="button" hidden>👀 Comité</button>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="live" id="liveBanner" hidden>
+  🔴 EN VIVO &nbsp;·&nbsp; <span id="liveCount">3</span> amigas conectadas
+</div>
+
+<!-- ====== EASTER EGG 1: MODO CACHONDITO ====== -->
+<div class="backdrop" id="backdrop" hidden>
+
+  <div class="card" id="cardHot" role="dialog" aria-modal="true" aria-labelledby="hotTitle" hidden>
+    <button class="card-x" type="button" data-close aria-label="Cerrar">×</button>
+    <p class="kicker">Te dije que no lo iba a hacer</p>
+    <h2 id="hotTitle">Modo cachondito</h2>
+
+    <div class="thermo" aria-hidden="true"><span class="thermo-fill" id="thermoFill"></span></div>
+    <p class="thermo-num"><b id="thermoNum">36.5</b> °C &nbsp;·&nbsp; <span id="hotLevel">nivel 0 · decente</span></p>
+
+    <p class="card-line" id="hotLine">Presiona y verás.</p>
+
+    <button class="card-btn" id="hotMore" type="button">Subir la temperatura 🔥</button>
+    <p class="card-foot">Conste que fue idea tuya nombrarlo.</p>
+  </div>
+
+  <!-- ====== EASTER EGG 2: MODO CHISMOSAS ====== -->
+  <div class="card" id="cardChisme" role="dialog" aria-modal="true" aria-labelledby="chTitle" hidden>
+    <button class="card-x" type="button" data-close aria-label="Cerrar">×</button>
+    <p class="kicker">Alerta de perímetro</p>
+    <h2 id="chTitle">👀 Modo chismosas</h2>
+    <p class="card-sub">Bienvenidas, comité evaluador. Las estábamos esperando.</p>
+
+    <ul class="chisme-list" id="chismeList"></ul>
+
+    <p class="vote-q">Votación oficial del comité:</p>
+    <div class="vote" id="voteBox">
+      <button class="card-btn small" type="button" data-v="ok">💛 Aprobado</button>
+      <button class="card-btn small" type="button" data-v="no">🙄 Exagerado</button>
+    </div>
+    <p class="vote-result" id="voteResult"></p>
+  </div>
+
+</div>
+
+<noscript>
+  <p style="text-align:center;font-family:Georgia,serif;padding:2rem">
+    Esta carta necesita JavaScript para florecer. 🌻
+  </p>
+</noscript>
+
+<script src="script.js"></script>
+</body>
+</html>
