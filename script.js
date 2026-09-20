@@ -48,6 +48,7 @@
   var btnHot    = $('#btnHot');
   var btnChisme = $('#btnChisme');
   var btnAmor   = $('#btnAmor');
+  var pistaInicio = $('#pistaInicio');
   var toastEl   = $('#toast');
 
   // Respetar a quien pide menos movimiento: la historia es la misma, más corta.
@@ -369,6 +370,7 @@
     var alive = function () { return my === runId; };
 
     state = 'playing';
+    if (pistaInicio) pistaInicio.hidden = true;
     btnMain.disabled = true;
     btnMain.textContent = 'Floreciendo…';
 
@@ -410,8 +412,8 @@
     state = 'done';
     btnMain.disabled = false;
     btnMain.textContent = 'Volver a florecer 🌻';
-    btnHot.hidden = false;
-    btnAmor.hidden = false;
+    // E-01: al terminar de florecer solo queda «Volver a florecer». Los otros
+    // botones se ganan: corazón → chismosas → No presionar → aviso → botón final.
     construirPuntos();
     pintarCuenta();
     hintTap.hidden = false;
@@ -759,6 +761,8 @@
       chismeOn = true;
       document.body.classList.add('mode-chisme');
       btnChisme.hidden = false;
+      btnChisme.classList.add('entra');
+      aparecer(btnHot);                 // E-01, paso 2: se gana el «No presionar»
 
       var list = $('#chismeList');
       list.innerHTML = '';
@@ -814,6 +818,36 @@
   });
 
   /* ------------------------------------------------------------
+     LA CADENA DEL FINAL (E-01)
+     Los botones no están desde el principio: se ganan de uno en uno.
+     corazón ×7 → chismosas → «No presionar» → 40 °C y salir → aviso →
+     botón final resaltado → mensaje de flores.
+     ------------------------------------------------------------ */
+
+  var avisoMostrado = false, tarjetaActual = null, avisoTimer = null;
+
+  function aparecer(btn) {
+    if (!btn.hidden) return;
+    btn.hidden = false;
+    btn.classList.remove('entra');
+    void btn.offsetWidth;              // reiniciar la animación si ya la tuvo
+    btn.classList.add('entra');
+  }
+
+  function abrirAviso() {
+    avisoMostrado = true;
+    showCard('#cardAviso');
+  }
+
+  // Al cerrar el aviso: la barra se queda con un solo botón, resaltado.
+  function destaparBotonFinal() {
+    btnHot.hidden = true;
+    btnChisme.hidden = true;
+    aparecer(btnAmor);
+    setTimeout(function () { btnAmor.classList.add('resaltado'); }, 850);
+  }
+
+  /* ------------------------------------------------------------
      tarjetas
      ------------------------------------------------------------ */
 
@@ -822,8 +856,10 @@
   function showCard(sel) {
     $('#cardHot').hidden    = true;
     $('#cardChisme').hidden = true;
+    $('#cardAviso').hidden  = true;
     $(sel).hidden  = false;
     backdrop.hidden = false;
+    tarjetaActual = sel;
   }
   var enfriarTimer = null;
 
@@ -836,9 +872,23 @@
     else if (document.body.classList.contains('mood-hot')) {
       enfriarTimer = setTimeout(enfriar, 2600);
     }
+    var cerrada = tarjetaActual;
+    tarjetaActual = null;
     backdrop.hidden = true;
     $('#cardHot').hidden = true;
     $('#cardChisme').hidden = true;
+    $('#cardAviso').hidden = true;
+    if (inmediato) return;
+
+    // E-01 paso 3: sale del «No presionar» HABIENDO LLEGADO AL MÁXIMO.
+    // El aviso espera a que el corazón se enfríe: primero se ve pasar de rojo
+    // a amarillo, y recién entonces aparece la ventana.
+    if (cerrada === '#cardHot' && hotLevel >= HOT.length && !avisoMostrado) {
+      clearTimeout(avisoTimer);
+      avisoTimer = setTimeout(abrirAviso, 3400);
+    }
+    // E-01 paso 4: cerró el aviso → se destapa el botón final, solo.
+    if (cerrada === '#cardAviso') destaparBotonFinal();
   }
 
   backdrop.addEventListener('click', function (e) {
@@ -851,9 +901,15 @@
   function resetEggs() {
     hotLevel = 0; heartTaps = 0; chismeOn = false; voted = false;
     modoTexto = false; floresExtra = [];
+    avisoMostrado = false; tarjetaActual = null;
+    clearTimeout(avisoTimer);
     document.body.classList.remove('mood-hot', 'hot-max', 'texto');
     btnAmor.hidden = true;
+    btnAmor.classList.remove('resaltado', 'entra');
+    btnHot.classList.remove('entra');
+    btnChisme.classList.remove('entra');
     btnAmor.textContent = '💛 Una última cosa';
+    if (pistaInicio) pistaInicio.hidden = false;
     hintTexto.textContent = PISTAS[0];
     hintTap.classList.remove('cerca');
     construirPuntos();
@@ -883,6 +939,7 @@
   });
 
   btnAmor.addEventListener('click', function () {
+    btnAmor.classList.remove('resaltado');
     if (modoTexto) {
       volverAlCorazon();
       btnAmor.textContent = '💛 Una última cosa';

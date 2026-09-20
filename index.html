@@ -64,6 +64,7 @@
   <button class="btn" id="btnAmor" type="button" hidden>💛 Una última cosa</button>
   <button class="btn ghost danger" id="btnHot" type="button" hidden>⛔ No presionar</button>
   <button class="btn ghost" id="btnChisme" type="button" hidden>👀 Comité</button>
+  <p class="pista-inicio" id="pistaInicio">léela con calma, y toca lo que te llame la atención</p>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -87,6 +88,19 @@
 
     <button class="card-btn" id="hotMore" type="button">Subir la temperatura 🔥</button>
     <p class="card-foot">Conste que fue idea tuya nombrarlo.</p>
+  </div>
+
+  <!-- ====== AVISO: se ganó el botón final (E-01) ====== -->
+  <div class="card" id="cardAviso" role="dialog" aria-modal="true" aria-labelledby="avTitle" hidden>
+    <button class="card-x" type="button" data-close aria-label="Cerrar">×</button>
+    <p class="kicker">Lo encontraste todo</p>
+    <h2 id="avTitle">💛 Se encendió un botón</h2>
+    <p class="card-line">
+      Ahí abajo acaba de aparecer uno nuevo, y es el último que queda.
+      Pero no corras: <b>léete la carta entera primero</b>, que es lo que de verdad te quería
+      decir. Cuando la termines, púlsalo.
+    </p>
+    <button class="card-btn" type="button" data-close>Voy a leerla 💛</button>
   </div>
 
   <!-- ====== EASTER EGG 2: MODO CHISMOSAS ====== -->
