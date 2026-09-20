@@ -172,8 +172,8 @@ body.mood-hot{ background:var(--bg-hot); }
 }
 .seed-pulse{ animation:seedPulse 1.6s ease-in-out 1 .5s; transform-box:fill-box; transform-origin:center; }
 
-.core{ fill:#4a3712; }
-.pt{ stroke:none; }
+.core{ fill:#4a3712; transition:fill 1.1s ease; }
+.pt{ stroke:none; transition:fill 1.1s ease; }
 
 /* flor del corazón */
 .fl{
@@ -181,7 +181,17 @@ body.mood-hot{ background:var(--bg-hot); }
   transform:var(--pos) scale(0);
   animation:bloom .8s cubic-bezier(.34,1.45,.6,1) both;
 }
-body.mood-hot .fl.hot .pt{ fill:#e8604a; transition:fill 1.2s ease; }
+/* El termómetro se nota en el corazón: primero unas pocas flores, y al máximo
+   todas. Al salir del modo se quitan las clases y el fill vuelve al atributo
+   amarillo de cada flor, con la transición de arriba. */
+body.mood-hot .fl.hot .pt{ fill:#e8604a; }
+
+body.hot-max{ background:#fff3ef; }
+body.hot-max #l-crown .fl .pt          { fill:#d93b2b; }
+body.hot-max #l-crown .fl:nth-child(3n) .pt{ fill:#c42f26; }
+body.hot-max #l-crown .fl:nth-child(4n) .pt{ fill:#ea5a46; }
+body.hot-max #l-crown .core            { fill:#5c1c12; }
+body.hot-max #l-fx .fx-fall .pt        { fill:#d93b2b; }
 
 /* flor grande de la escena 1 */
 .intro-pos{

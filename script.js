@@ -332,7 +332,7 @@
       var r = p.edge ? rnd(9, 12.5) : rnd(10, 15.5);
       var delay = (i / pts.length) * BLOOM_WINDOW + rnd(0, 240);
       var node = flowerNode(c[0], c[1], r, delay);
-      crownPts.push({ x: c[0], y: c[1], r: r, node: node });
+      crownPts.push({ x: c[0], y: c[1], r: r, node: node, calor: Math.random() });
       frag.appendChild(node);
     });
 
@@ -544,24 +544,52 @@
     { t: 36.5, lvl: 'nivel 1 · decente',
       txt: 'Me dijiste, con todas sus letras: «no me vayas a salir con algo cachondito». Y yo juré que no. Aquí empieza la parte donde se nota que mentí.' },
     { t: 37.2, lvl: 'nivel 2 · sospechoso',
-      txt: 'Ojo: la idea la nombraste tú. Yo iba a hacer una página cursi y normal, pero una cosa así, una vez dicha, ya no se desdice.' },
+      txt: 'Y que conste que lo nombraste tú. Yo iba a hacer una página cursi y normal, pero me quedé pensando en eso y ya no pude concentrarme en las flores.' },
     { t: 37.9, lvl: 'nivel 3 · tibio',
-      txt: 'Aviso legal: las flores son amarillas. Lo que estoy pensando mientras programo esto, no tanto.' },
+      txt: 'Aviso: las flores son amarillas. Lo que estaba pensando mientras las dibujaba, no tanto. Mira cómo se están poniendo algunas.' },
     { t: 38.6, lvl: 'nivel 4 · caliente',
-      txt: 'Conste que arranqué esto queriendo ser romántico. Iba bien hasta como el tercer párrafo.' },
+      txt: 'Te lo digo bonito: hay días en que no tengo ganas de hablar. Tengo ganas de que se te olvide de qué estábamos hablando.' },
     { t: 39.3, lvl: 'nivel 5 · peligroso',
-      txt: 'Te lo digo suave: si estuvieras aquí en vez de leyendo esto, esta página no habría alcanzado a terminarse.' },
+      txt: 'Si en vez de estar leyendo esto estuvieras aquí, te juro que esta página no habría alcanzado a terminarse. Ni el corazón, ni la carta, ni nada. Y no me arrepentiría.' },
     { t: 40.0, lvl: 'nivel 6 · termómetro reventado',
-      txt: 'Y hasta ahí llego, que tus amigas están leyendo esto por encima de tu hombro. 👀 Las saludo.' }
+      txt: 'Listo: mira el corazón. Todas rojas. Así me pongo yo cuando te demoras en contestar y apareces como si nada. Y hasta aquí llego, que tus amigas están leyendo por encima de tu hombro. 👀' }
   ];
   var HOT_EXTRA = [
-    'Ya. Vaya a tomar agua.',
-    'El termómetro presentó su renuncia.',
-    'Sigue presionando y le cuento a tus amigas lo que ibas a preguntar.',
-    'Se acabó el chiste. Vuelve a leer la carta, que esa sí es en serio. 💛'
+    'Ya. Respira. Yo también.',
+    'El termómetro presentó la renuncia por escrito.',
+    'Sigue presionando y le cuento a tus amigas qué era lo que ibas a preguntar.',
+    'Se acabó el chiste. Cierra esto y vuelve a leer la carta, que esa sí es en serio. 💛'
   ];
 
   var hotLevel = 0;
+
+  // Cuántas flores se sonrojan en cada nivel. Cada flor lleva su propio número
+  // fijo (f.calor), así el grupo CRECE de forma estable en vez de sortearse otra
+  // vez en cada pulsación — que era lo que acababa con medio corazón en rojo.
+  function proporcionCalor() {
+    if (hotLevel >= HOT.length) return 1;      // máximo: todas
+    if (hotLevel >= 5) return 0.45;
+    if (hotLevel >= 4) return 0.25;
+    if (hotLevel >= 3) return 0.12;
+    return 0;
+  }
+
+  function aplicarCalor() {
+    var cl = document.body.classList;
+    cl.toggle('mood-hot', hotLevel >= 3);
+    cl.toggle('hot-max', hotLevel >= HOT.length);
+    var prop = proporcionCalor();
+    crownPts.forEach(function (f) {
+      f.node.classList.toggle('hot', prop > 0 && f.calor <= prop);
+    });
+  }
+
+  // Salir del modo devuelve el corazón a su amarillo: el nivel se conserva,
+  // así que si vuelve a entrar lo encuentra donde lo dejó.
+  function enfriar() {
+    document.body.classList.remove('mood-hot', 'hot-max');
+    crownPts.forEach(function (f) { f.node.classList.remove('hot'); });
+  }
 
   function paintHot() {
     var i = Math.min(hotLevel, HOT.length) - 1;
@@ -573,14 +601,8 @@
     $('#hotLine').textContent    = extra || h.txt;
     $('#thermoFill').style.width = Math.min(100, (h.t - 36) / 4 * 100) + '%';
 
-    if (hotLevel >= 3 && !document.body.classList.contains('mood-hot')) {
-      document.body.classList.add('mood-hot');
-      // una de cada doce flores se sonroja, y solo se decide una vez:
-      // repartirlo en cada pulsación acababa con un cuarto del corazón en rojo
-      crownPts.forEach(function (f) {
-        if (Math.random() < 0.085) f.node.classList.add('hot');
-      });
-    }
+    aplicarCalor();
+
     if (hotLevel >= 5 && crownPts.length) {
       for (var k = 0; k < 4; k++) {
         var f = pick(crownPts);
@@ -594,6 +616,7 @@
   }
 
   function openHot() {
+    clearTimeout(enfriarTimer);
     hotLevel = Math.max(hotLevel, 1);
     paintHot();
     showCard('#cardHot');
@@ -685,7 +708,17 @@
     $(sel).hidden  = false;
     backdrop.hidden = false;
   }
-  function closeCards() {
+  var enfriarTimer = null;
+
+  // Al cerrar, el corazón vuelve al amarillo — pero no de golpe: la tarjeta tapa
+  // el dibujo (en el teléfono, casi entero), así que se deja ver el rojo un par
+  // de segundos y recién ahí se enfría.
+  function closeCards(inmediato) {
+    clearTimeout(enfriarTimer);
+    if (inmediato) enfriar();
+    else if (document.body.classList.contains('mood-hot')) {
+      enfriarTimer = setTimeout(enfriar, 2600);
+    }
     backdrop.hidden = true;
     $('#cardHot').hidden = true;
     $('#cardChisme').hidden = true;
@@ -700,6 +733,7 @@
 
   function resetEggs() {
     hotLevel = 0; heartTaps = 0; chismeOn = false; voted = false;
+    document.body.classList.remove('mood-hot', 'hot-max');
     hintTexto.textContent = PISTAS[0];
     hintTap.classList.remove('cerca');
     construirPuntos();
@@ -710,7 +744,7 @@
     $('#thermoFill').style.width = '0%';
     btnHot.hidden = true;
     btnChisme.hidden = true;
-    closeCards();
+    closeCards(true);
   }
 
   /* ------------------------------------------------------------
