@@ -356,6 +356,8 @@
     letterEl.classList.remove('visible');
     letterEl.hidden = true;                 // E-03: la carta se gana otra vez
     clearTimeout(finalTimer);
+    escena.style.transition = '';
+    escena.style.transform = '';
     L.ground.innerHTML = '';
     L.plant.innerHTML  = '';
     L.crown.innerHTML  = '';
@@ -559,13 +561,15 @@
     cx.textAlign = 'center';
     cx.textBaseline = 'middle';
 
-    var fam = ' Georgia, "Times New Roman", serif';
+    // E-04: sans gruesa. Con serif, en Android (que no tiene Georgia) las patitas y los
+    // trazos finos se muestreaban a medias y el mensaje salía chueco.
+    var fam = ' "Arial Black", "Helvetica Neue", Arial, Roboto, sans-serif';
     var base = 150, ancho = 0, i;
-    try { cx.letterSpacing = '9px'; } catch (e) { /* navegador viejo: sin separación */ }
-    cx.font = '700 ' + base + 'px' + fam;
+    try { cx.letterSpacing = '10px'; } catch (e) { /* navegador viejo: sin separación */ }
+    cx.font = '900 ' + base + 'px' + fam;
     for (i = 0; i < lineas.length; i++) ancho = Math.max(ancho, cx.measureText(lineas[i]).width);
     var size = Math.min(base, base * 430 / ancho);   // 430 cabe en la caja del dibujo
-    cx.font = '700 ' + size + 'px' + fam;
+    cx.font = '900 ' + size + 'px' + fam;
 
     var alto = size * 1.25;
     var y0 = 320 - (lineas.length - 1) * alto / 2;   // centro del dibujo: el tronco se va
@@ -579,8 +583,9 @@
     var paso = Math.max(6, Math.round(Math.sqrt(area / objetivo)));
     var pts = [];
     for (y = 0; y < H; y += paso) for (x = 0; x < W; x += paso) {
-      if (d[(y * W + x) * 4 + 3] > 128) pts.push({ x: x + rnd(-1.6, 1.6), y: y + rnd(-1.6, 1.6) });
+      if (d[(y * W + x) * 4 + 3] > 128) pts.push({ x: x + rnd(-0.4, 0.4), y: y + rnd(-0.4, 0.4) });
     }
+    pts.paso = paso;
     return pts;
   }
 
@@ -597,15 +602,18 @@
     modoTexto = true;
     document.body.classList.add('texto');
 
-    var destinos = puntosTexto(MENSAJE, Math.max(300, Math.round(crownPts.length * 1.7)));
+    // E-04: en el teléfono, menos flores (cada una que viaja repinta el dibujo entero)
+    var objetivo = window.innerWidth < 620 ? 215 : 250;   // punto medio: se leen y se ven flores
+    var destinos = puntosTexto(MENSAJE, objetivo);
     if (!destinos.length) { modoTexto = false; document.body.classList.remove('texto'); return; }
 
     // faltan flores para escribirlo: nacen las que hagan falta
     var faltan = destinos.length - crownPts.length, frag = document.createDocumentFragment(), i;
     for (i = 0; i < faltan; i++) {
       var base = pick(crownPts);
-      var nueva = flowerNode(base.x, base.y, rnd(9, 13), rnd(0, 420));
-      var reg = { x: base.x, y: base.y, r: 11, node: nueva, calor: Math.random(), extra: true };
+      var rNueva = rnd(9, 13);
+      var nueva = flowerNode(base.x, base.y, rNueva, rnd(0, 420));
+      var reg = { x: base.x, y: base.y, r: rNueva, node: nueva, calor: Math.random(), extra: true };
       crownPts.push(reg);
       frag.appendChild(nueva);
     }
@@ -615,14 +623,20 @@
     var orden = crownPts.slice().sort(function (a, b) { return (a.x - b.x) || (a.y - b.y); });
     destinos.sort(function (a, b) { return (a.x - b.x) || (a.y - b.y); });
 
+    // E-04: todas del MISMO tamaño al escribir (antes iban de 9 a 15,5 y el trazo salía
+    // desigual). El radio sale del paso del muestreo: se solapan un poco, así se ven flores y no puntos.
+    var radio = destinos.paso * 0.86;
     setTimeout(function () {
       orden.forEach(function (f, k) {
-        var d = destinos[k % destinos.length];
-        var jitter = k >= destinos.length ? 5 : 0;      // las repetidas engordan el trazo
         soltarAnimacion(f.node);
         f.node.style.transitionDelay = (rnd(0, 520) | 0) + 'ms';
-        f.node.style.setProperty('--pos',
-          pos(d.x + rnd(-jitter, jitter), d.y + rnd(-jitter, jitter), rnd(0, 360)));
+        if (k >= destinos.length) {              // sobran: se apagan donde están
+          f.node.classList.add('sobra');
+          return;
+        }
+        var d = destinos[k];
+        f.node.style.setProperty('--esc', (radio / f.r).toFixed(3));
+        f.node.style.setProperty('--pos', pos(d.x, d.y, rnd(0, 360)));
       });
     }, faltan > 0 ? 620 : 40);
   }
@@ -836,19 +850,37 @@
   // E-03 paso 6 y 7: la carta se desvanece, se van tronco y suelo, las flores
   // escriben en el centro, y un rato después vuelve «Volver a florecer».
   var finalTimer = null;
+  // Antes la carta se plegaba animando max-height: eso recalcula la página en cada
+  // fotograma mientras el dibujo se mueve, y en el teléfono se notaba (E-04). Ahora:
+  // se desvanece → se quita de golpe → el dibujo, que salta al centro, se devuelve
+  // con un transform a donde estaba y se desliza (técnica FLIP: solo compositor).
+  var escena = $('.scene');
   function elFinal() {
     btnAmor.classList.remove('resaltado');
     btnAmor.hidden = true;
     document.body.classList.add('final');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
     finalTimer = setTimeout(function () {
-      formarMensaje();
-      // viaje de las flores ≈ 0,6 s de nacer + 0,5 de retraso + 1,9 de viaje
+      var antes = escena.getBoundingClientRect().top;
+      letterEl.hidden = true;
+      var despues = escena.getBoundingClientRect().top;
+      escena.style.transition = 'none';
+      escena.style.transform = 'translateY(' + (antes - despues).toFixed(1) + 'px)';
+      void escena.offsetWidth;
+      escena.style.transition = 'transform 1s cubic-bezier(.4,0,.2,1)';
+      escena.style.transform = '';
+
       finalTimer = setTimeout(function () {
-        btnMain.textContent = 'Volver a florecer 🌻';
-        aparecer(btnMain);
-      }, 3100 + 3000);
-    }, 1300);
+        escena.style.transition = '';
+        formarMensaje();
+        // viaje de las flores ≈ 0,6 s de nacer + 0,5 de retraso + 1,9 de viaje
+        finalTimer = setTimeout(function () {
+          btnMain.textContent = 'Volver a florecer 🌻';
+          aparecer(btnMain);
+        }, 3100 + 3000);
+      }, 1050);
+    }, 950);
   }
 
   /* ------------------------------------------------------------

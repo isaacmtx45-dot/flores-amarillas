@@ -85,9 +85,7 @@ body.mood-hot{ background:var(--bg-hot); }
 /* ---------------- la carta ---------------- */
 
 .letter{
-  max-height:4000px;
-  overflow:hidden;
-  transition:opacity .9s ease, max-height 1.3s ease .5s, padding 1.3s ease .5s;
+  transition:opacity .9s ease;          /* E-04: solo opacidad; el plegado lo hace el JS */
   max-width:37rem;
   margin-inline:auto;
   padding:clamp(6px,2vw,18px) clamp(4px,2vw,14px);
@@ -217,6 +215,10 @@ body.hot-max #l-fx .fx-fall .pt        { fill:#d93b2b; }
   transform-box:view-box;
 }
 body.done #l-sway{ animation:sway 9s ease-in-out infinite; }
+/* E-04: en el teléfono el balanceo se apaga. Girar un grupo del SVG obliga a
+   repintar el dibujo entero en cada fotograma, siempre, y le roba fluidez a
+   todo lo demás. Es de ±0,6°: no se echa de menos. */
+@media (pointer:coarse){ body.done #l-sway{ animation:none; } }
 
 /* ---- el final: las flores viajan a escribir el mensaje ----
    Al terminar la floración se cancela la animación de cada flor (si sigue
@@ -228,12 +230,15 @@ body.done .fl{
 }
 /* Escritas, las flores encogen: con el tamaño del corazón las letras se
    empastan y no hay quien las lea. */
-body.texto .fl{ transform:var(--pos) scale(.58); }
+/* E-04: cada flor escribe con su propia escala (--esc) para que todas queden del
+   mismo tamaño; las que sobran se apagan donde están. */
+body.texto .fl{ transform:var(--pos) scale(var(--esc, .58)); }
+body.texto .fl.sobra{ transform:var(--pos) scale(0); opacity:0; transition:transform .9s ease, opacity .9s ease; }
 body.texto #l-plant{ opacity:.22; }
 
 /* E-03: «Una última cosa». La carta se desvanece y se pliega, el tronco, las
    ramas y la base se van del todo, y solo queda el mensaje de flores. */
-body.final .letter{ opacity:0; max-height:0; padding-top:0; padding-bottom:0; }
+body.final .letter{ opacity:0; }
 body.final #l-plant,
 body.final #l-ground{ opacity:0; transition:opacity 1.4s ease; }
 /* la cuenta de abajo trae su propia animación de entrada (fill both), que le
@@ -350,13 +355,30 @@ body.done .scene svg{ cursor:pointer; }
 /* El último botón late hasta que lo pulsen, con el borde un punto más marcado
    (él lo pidió así: «un poco más grueso pero no tanto»). */
 .btn.resaltado{
+  position:relative;
   border-width:2px;
   border-color:rgba(243,184,9,.85);
   animation:latido 2.6s ease-in-out infinite;
 }
+/* E-04: el halo va en un pseudo-elemento que solo cambia de opacidad. Animar
+   box-shadow repinta en cada fotograma; opacidad y transform no. */
+.btn.resaltado::after{
+  content:'';
+  position:absolute;
+  inset:-8px;
+  border-radius:999px;
+  background:rgba(243,184,9,.14);
+  z-index:-1;
+  opacity:0;
+  pointer-events:none;
+  animation:halo 2.6s ease-in-out infinite;
+}
 @keyframes latido{
-  0%,100%{ box-shadow:0 0 0 0 rgba(243,184,9,0);    transform:scale(1); }
-  50%    { box-shadow:0 0 0 8px rgba(243,184,9,.13); transform:scale(1.035); }
+  0%,100%{ transform:scale(1); }
+  50%    { transform:scale(1.035); }
+}
+@keyframes halo{
+  50%{ opacity:1; }
 }
 
 /* ---- E-02: la única pista de cómo se usa esto ---- */
