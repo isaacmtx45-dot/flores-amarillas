@@ -352,8 +352,10 @@
   function hardReset() {
     runId++;
     clearTimers();
-    document.body.classList.remove('done', 'mood-hot', 'mode-chisme');
+    document.body.classList.remove('done', 'mood-hot', 'mode-chisme', 'final', 'texto');
     letterEl.classList.remove('visible');
+    letterEl.hidden = true;                 // E-03: la carta se gana otra vez
+    clearTimeout(finalTimer);
     L.ground.innerHTML = '';
     L.plant.innerHTML  = '';
     L.crown.innerHTML  = '';
@@ -400,9 +402,8 @@
     var bloomMs = bloomHeart();
     await sleep(bloomMs * 0.82); if (!alive()) return;
 
-    // --- ESCENA 5: la carta ---
-    letterEl.classList.add('visible');
-    await sleep(1700); if (!alive()) return;
+    // E-03: la carta ya no sale aquí. Se gana al final de la cadena.
+    await sleep(900); if (!alive()) return;
 
     // --- estado final ---
     document.body.classList.add('done');
@@ -418,13 +419,8 @@
     pintarCuenta();
     hintTap.hidden = false;
 
-    // En vertical la carta queda debajo del corazón: la asomo sin decapitar el corazón.
-    if (window.innerWidth < 900) {
-      var falta = letterEl.getBoundingClientRect().top - window.innerHeight * 0.62;
-      if (falta > 16) window.scrollBy({ top: Math.round(falta), behavior: 'smooth' });
-    }
     await sleep(1400); if (!alive()) return;
-    toast('Toca el corazón 🌻');
+    toast('Toca el corazón 🌻', 7000);      // E-03: que dure, es la única pista
   }
 
   /* ------------------------------------------------------------
@@ -534,6 +530,7 @@
   svg.addEventListener('click', function (e) {
     if (state === 'idle') { play(); return; }      // tocar la flor también arranca
     if (state !== 'done') return;
+    if (document.body.classList.contains('final')) return;   // solo queda el mensaje
     var p = localPoint(e);
     petalBurst(p.x, p.y);
     if (chismeOn) return;                          // ya se destapó: solo pétalos
@@ -551,7 +548,6 @@
 
   var MENSAJE = ['TE QUIERO', 'SARA'];
   var modoTexto = false;
-  var floresExtra = [];
 
   function puntosTexto(lineas, objetivo) {
     var W = 600, H = 640;
@@ -572,7 +568,7 @@
     cx.font = '700 ' + size + 'px' + fam;
 
     var alto = size * 1.25;
-    var y0 = 292 - (lineas.length - 1) * alto / 2;
+    var y0 = 320 - (lineas.length - 1) * alto / 2;   // centro del dibujo: el tronco se va
     for (i = 0; i < lineas.length; i++) cx.fillText(lineas[i], 300, y0 + i * alto);
 
     var d = cx.getImageData(0, 0, W, H).data, x, y;
@@ -610,7 +606,7 @@
       var base = pick(crownPts);
       var nueva = flowerNode(base.x, base.y, rnd(9, 13), rnd(0, 420));
       var reg = { x: base.x, y: base.y, r: 11, node: nueva, calor: Math.random(), extra: true };
-      crownPts.push(reg); floresExtra.push(reg);
+      crownPts.push(reg);
       frag.appendChild(nueva);
     }
     L.crown.appendChild(frag);
@@ -629,29 +625,6 @@
           pos(d.x + rnd(-jitter, jitter), d.y + rnd(-jitter, jitter), rnd(0, 360)));
       });
     }, faltan > 0 ? 620 : 40);
-  }
-
-  function volverAlCorazon() {
-    if (!modoTexto) return;
-    modoTexto = false;
-    document.body.classList.remove('texto');
-
-    crownPts.forEach(function (f) {
-      soltarAnimacion(f.node);
-      f.node.style.transitionDelay = (rnd(0, 420) | 0) + 'ms';
-      f.node.style.setProperty('--pos', pos(f.x, f.y, rnd(0, 360)));
-    });
-
-    // las que nacieron solo para el mensaje se despiden
-    var seVan = floresExtra;
-    floresExtra = [];
-    seVan.forEach(function (f) {
-      f.node.classList.add('yendose');
-      crownPts.splice(crownPts.indexOf(f), 1);
-    });
-    setTimeout(function () {
-      seVan.forEach(function (f) { if (f.node.parentNode) f.node.parentNode.removeChild(f.node); });
-    }, 1800);
   }
 
   /* ------------------------------------------------------------
@@ -834,17 +807,48 @@
     btn.classList.add('entra');
   }
 
+  // E-03 paso 5: EN EL MISMO MOMENTO en que sale el aviso se van los botones
+  // intermedios, el banner y el reinicio, y aparece el botón final. Antes esperaba
+  // a «Voy a leerla» y él lo marcó como fallo.
   function abrirAviso() {
     avisoMostrado = true;
+    btnHot.hidden = true;
+    btnChisme.hidden = true;
+    btnMain.hidden = true;
+    clearInterval(liveTimer);
+    $('#liveBanner').hidden = true;
+    aparecer(btnAmor);
+    setTimeout(function () { btnAmor.classList.add('resaltado'); }, 850);
     showCard('#cardAviso');
   }
 
-  // Al cerrar el aviso: la barra se queda con un solo botón, resaltado.
-  function destaparBotonFinal() {
-    btnHot.hidden = true;
-    btnChisme.hidden = true;
-    aparecer(btnAmor);
-    setTimeout(function () { btnAmor.classList.add('resaltado'); }, 850);
+  // Al cerrar el aviso aparece la carta, línea por línea, debajo del árbol.
+  function mostrarCarta() {
+    letterEl.hidden = false;
+    void letterEl.offsetWidth;          // que la transición de cada línea arranque de cero
+    letterEl.classList.add('visible');
+    setTimeout(function () {
+      var top = letterEl.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.3;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    }, 250);
+  }
+
+  // E-03 paso 6 y 7: la carta se desvanece, se van tronco y suelo, las flores
+  // escriben en el centro, y un rato después vuelve «Volver a florecer».
+  var finalTimer = null;
+  function elFinal() {
+    btnAmor.classList.remove('resaltado');
+    btnAmor.hidden = true;
+    document.body.classList.add('final');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    finalTimer = setTimeout(function () {
+      formarMensaje();
+      // viaje de las flores ≈ 0,6 s de nacer + 0,5 de retraso + 1,9 de viaje
+      finalTimer = setTimeout(function () {
+        btnMain.textContent = 'Volver a florecer 🌻';
+        aparecer(btnMain);
+      }, 3100 + 3000);
+    }, 1300);
   }
 
   /* ------------------------------------------------------------
@@ -887,8 +891,8 @@
       clearTimeout(avisoTimer);
       avisoTimer = setTimeout(abrirAviso, 3400);
     }
-    // E-01 paso 4: cerró el aviso → se destapa el botón final, solo.
-    if (cerrada === '#cardAviso') destaparBotonFinal();
+    // E-03: cerró el aviso → sale la carta (el botón final ya estaba).
+    if (cerrada === '#cardAviso') mostrarCarta();
   }
 
   backdrop.addEventListener('click', function (e) {
@@ -900,7 +904,7 @@
 
   function resetEggs() {
     hotLevel = 0; heartTaps = 0; chismeOn = false; voted = false;
-    modoTexto = false; floresExtra = [];
+    modoTexto = false;
     avisoMostrado = false; tarjetaActual = null;
     clearTimeout(avisoTimer);
     document.body.classList.remove('mood-hot', 'hot-max', 'texto');
@@ -909,6 +913,7 @@
     btnHot.classList.remove('entra');
     btnChisme.classList.remove('entra');
     btnAmor.textContent = '💛 Una última cosa';
+    btnMain.hidden = false;
     if (pistaInicio) pistaInicio.hidden = false;
     hintTexto.textContent = PISTAS[0];
     hintTap.classList.remove('cerca');
@@ -938,16 +943,7 @@
     }
   });
 
-  btnAmor.addEventListener('click', function () {
-    btnAmor.classList.remove('resaltado');
-    if (modoTexto) {
-      volverAlCorazon();
-      btnAmor.textContent = '💛 Una última cosa';
-    } else {
-      formarMensaje();
-      btnAmor.textContent = 'Volver al corazón 💛';
-    }
-  });
+  btnAmor.addEventListener('click', elFinal);
 
   btnHot.addEventListener('click', openHot);
   btnChisme.addEventListener('click', function () { openChisme(false); eyeStorm(); });
@@ -963,7 +959,7 @@
     buf = (buf + e.key.toLowerCase()).slice(-7);
     if (state !== 'done') return;
     if (buf.indexOf('chisme') >= 0) { buf = ''; openChisme(true); }
-    if (buf.indexOf('calor')  >= 0) { buf = ''; btnHot.hidden = false; openHot(); }
+    // (el atajo «calor» se quitó con E-03: se saltaba el orden de la cadena)
   });
 
   // Al girar el teléfono cambia la densidad de la rejilla (< 620 px va más
